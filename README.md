@@ -16,7 +16,7 @@
 
 ```mermaid
 flowchart TD
-    Client["Enterprise Client / SPA"] -->|Bearer JWT| API["NestJS API Gateway (/api/v1)"]
+    Client["Enterprise Client / SPA"] -->|"Bearer JWT"| API["NestJS API Gateway (/api/v1)"]
 
     subgraph SecurityLayer ["Zero-Trust Security & Context Pipeline"]
         JWTGuard["JwtAuthGuard (Passport.js)"]
@@ -36,12 +36,12 @@ flowchart TD
     RLSInterceptor --> AuthMod
     RLSInterceptor --> UserMod
     RLSInterceptor --> DocMod
-    DocMod -->|emitAsync('audit.log')| AuditMod
+    DocMod -->|"emitAsync('audit.log')"| AuditMod
 
     subgraph DataLayer ["Persistence & Object Storage"]
-        PrismaRLS["PrismaService.$transaction\nSET LOCAL app.current_tenant_id = :tenantId"]
-        PG[("PostgreSQL 16\nFORCE ROW LEVEL SECURITY\n+ Immutable Audit Trigger")]
-        S3[("AWS S3 / MinIO\nBucket: contracts\n5-Min Pre-Signed URLs")]
+        PrismaRLS["PrismaService.$transaction - SET LOCAL app.current_tenant_id = :tenantId"]
+        PG[("PostgreSQL 16 - FORCE ROW LEVEL SECURITY + Immutable Audit Trigger")]
+        S3[("AWS S3 / MinIO - Bucket: contracts (5-Min Pre-Signed URLs)")]
     end
 
     AuthMod --> PrismaRLS
@@ -50,8 +50,8 @@ flowchart TD
     AuditMod --> PrismaRLS
     PrismaRLS --> PG
 
-    DocMod -->|@aws-sdk/s3-request-presigner| S3
-    Client -.->|Direct PUT / GET via Pre-Signed URL| S3
+    DocMod -->|"@aws-sdk/s3-request-presigner"| S3
+    Client -.->|"Direct PUT / GET via Pre-Signed URL"| S3
 ```
 
 ### ASCII Architecture Overview
