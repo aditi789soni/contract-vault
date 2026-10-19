@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  Viewer
+  Manager
+  Admin
+}
+
+enum AuditAction {
+  UPLOAD
+  DOWNLOAD
+  VIEW
+  DELETE
+}
+
+model Tenant {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique
+  domain    String?  @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users     User[]
+  documents Document[]
+  auditLogs AuditLog[]
+
+  @@map("tenants")
+}
+
+model User {
+  id               String   @id @default(uuid()) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  email            String   @unique
+  passwordHash     String   @map("password_hash")
+  role             Role     @default(Viewer)
+  refreshTokenHash String?  @map("refresh_token_hash")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  documents Document[]
+  auditLogs AuditLog[]
+
+  @@index([tenantId])
+  @@map("users")
+}
+
+model Document {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  uploadedBy String   @map("uploaded_by") @db.Uuid
+  title      String
+  fileKey    String   @unique @map("file_key")
+  mimeType   String   @map("mime_type")
+  sizeBytes  Int      @map("size_bytes")
+  metadata   Json?    @default("{}")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  uploader  User       @relation(fields: [uploadedBy], references: [id], onDelete: Restrict)
+  auditLogs AuditLog[]
+
+  @@index([tenantId])
+  @@map("documents")
+}
+
+model AuditLog {
+  id         String      @id @default(uuid()) @db.Uuid
+  timestamp  DateTime    @default(now())
+  tenantId   String      @map("tenant_id") @db.Uuid
+  userId     String      @map("user_id") @db.Uuid
+  ipAddress  String      @map("ip_address")
+  action     AuditAction
+  documentId String?     @map("document_id") @db.Uuid
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, timestamp])
+  @@map("audit_logs")
+}
